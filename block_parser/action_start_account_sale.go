@@ -45,22 +45,21 @@ func (b *BlockParser) ActionStartAccountSale(req FuncTransactionHandleReq) (resp
 		Manager:            mA,
 	}
 
-	salePrice, _ := builder.Price()
-	startedAt, _ := builder.StartedAt()
 	tokenInfo := timer.GetTokenPriceInfo(timer.TokenIdCkb)
-	salePriceUsd := tokenInfo.GetPriceUsd(salePrice)
+	priceUsd := tokenInfo.GetPriceUsd(builder.Price)
 	oID, _, oCT, _, oA, _ = core.FormatDasLockToHexAddress(req.Tx.Outputs[builder.Index].Lock.Args)
 	tradeInfo := dao.TableTradeInfo{
 		BlockNumber:      req.BlockNumber,
 		Outpoint:         common.OutPoint2String(req.TxHash, uint(builder.Index)),
-		Account:          builder.Account(),
+		Account:          builder.Account,
 		OwnerAlgorithmId: oID,
 		OwnerChainType:   oCT,
 		OwnerAddress:     oA,
-		Description:      builder.Description(),
-		StartedAt:        startedAt * 1e3,
-		PriceCkb:         salePrice,
-		PriceUsd:         salePriceUsd,
+		Description:      builder.Description,
+		StartedAt:        builder.StartedAt * 1e3,
+		PriceCkb:         builder.Price,
+		PriceUsd:         priceUsd,
+		ProfitRate:       builder.BuyerInviterProfitRate,
 		BlockTimestamp:   req.BlockTimestamp,
 		Status:           dao.AccountStatusOnSale,
 	}

@@ -25,14 +25,15 @@ type AccountCellDataBuilder struct {
 }
 
 type AccountCellParam struct {
-	OldIndex     uint32
-	NewIndex     uint32
-	Status       uint8
-	Action       string
-	AccountId    string
-	RegisterAt   uint64
-	SubAction    string
-	AccountChars *molecule.AccountChars
+	OldIndex          uint32
+	NewIndex          uint32
+	Status            uint8
+	Action            string
+	AccountId         string
+	RegisterAt        uint64
+	SubAction         string
+	AccountChars      *molecule.AccountChars
+	LastEditRecordsAt int64
 }
 
 func AccountCellDataBuilderFromTx(tx *types.Transaction, dataType common.DataType) (*AccountCellDataBuilder, error) {
@@ -146,14 +147,6 @@ func (a *AccountCellDataBuilder) getOldDataEntityOpt(p *AccountCellParam) *molec
 		oldAccountCellDataBytes := molecule.GoBytes2MoleculeBytes(a.AccountCellDataV1.AsSlice())
 		oldDataEntity = molecule.NewDataEntityBuilder().Entity(oldAccountCellDataBytes).
 			Version(DataEntityVersion1).Index(molecule.GoU32ToMoleculeU32(p.OldIndex)).Build()
-
-		temNewBuilder := molecule.NewAccountCellDataBuilder()
-		temNewBuilder.Records(*a.AccountCellDataV1.Records()).Id(*a.AccountCellDataV1.Id()).
-			Status(*a.AccountCellDataV1.Status()).Account(*a.AccountCellDataV1.Account()).
-			RegisteredAt(*a.AccountCellDataV1.RegisteredAt()).
-			LastTransferAccountAt(molecule.TimestampDefault()).
-			LastEditRecordsAt(molecule.TimestampDefault()).
-			LastEditManagerAt(molecule.TimestampDefault()).Build()
 	case common.GoDataEntityVersion2:
 		oldAccountCellDataBytes := molecule.GoBytes2MoleculeBytes(a.AccountCellData.AsSlice())
 		oldDataEntity = molecule.NewDataEntityBuilder().Entity(oldAccountCellDataBytes).
@@ -188,6 +181,8 @@ func (a *AccountCellDataBuilder) GenWitness(p *AccountCellParam) ([]byte, []byte
 		oldDataEntityOpt := a.getOldDataEntityOpt(p)
 		newBuilder := a.getNewAccountCellDataBuilder()
 
+		editManagerTimestamp := molecule.NewTimestampBuilder().Set(molecule.GoTimeUnixToMoleculeBytes(p.LastEditRecordsAt)).Build()
+		newBuilder.LastEditRecordsAt(editManagerTimestamp)
 		newAccountSaleCellData := newBuilder.Build()
 		newAccountSaleCellDataBytes := molecule.GoBytes2MoleculeBytes(newAccountSaleCellData.AsSlice())
 
@@ -248,9 +243,6 @@ func (a *AccountCellDataBuilder) GenWitness(p *AccountCellParam) ([]byte, []byte
 			accountId, err := molecule.AccountIdFromSlice(common.Hex2Bytes(p.AccountId), false)
 			if err != nil {
 				return nil, nil, fmt.Errorf("AccountIdFromSlice err: %s", err.Error())
-			}
-			if err != nil {
-				return nil, nil, fmt.Errorf("AccountCharFromSlice err: %s", err.Error())
 			}
 			newAccountSaleCellData := molecule.NewAccountCellDataBuilder().
 				Status(molecule.GoU8ToMoleculeU8(uint8(0))).
